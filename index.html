@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Following Robot Simulation Architecture</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .progress-info {
+            text-align: center;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+        
+        .tab {
+            padding: 12px 30px;
+            background: #ecf0f1;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .diagram-panel {
+            display: none;
+        }
+        
+        .diagram-panel.active {
+            display: block;
+        }
+        
+        .diagram-container {
+            position: relative;
+            width: 100%;
+            height: 900px;
+            border: 3px solid #34495e;
+            border-radius: 15px;
+            background: #f8f9fa;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .block {
+            position: absolute;
+            border: 2px solid;
+            border-radius: 10px;
+            background: white;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .block:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+        
+        .block-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #2c3e50;
+        }
+        
+        .block-details {
+            font-size: 10px;
+            color: #7f8c8d;
+            line-height: 1.3;
+        }
+        
+        /* Software Architecture Blocks */
+        .input-layer { border-color: #e74c3c; background: #fdf2f2; }
+        .processing-layer { border-color: #3498db; background: #f2f8fd; }
+        .decision-layer { border-color: #f39c12; background: #fef9f2; }
+        .action-layer { border-color: #27ae60; background: #f2fdf7; }
+        .output-layer { border-color: #9b59b6; background: #f8f2fd; }
+        
+        /* Hardware Architecture Blocks */
+        .sensor-hw { border-color: #e74c3c; background: #fdf2f2; }
+        .processing-hw { border-color: #3498db; background: #f2f8fd; }
+        .communication-hw { border-color: #f39c12; background: #fef9f2; }
+        .actuator-hw { border-color: #27ae60; background: #f2fdf7; }
+        .external-hw { border-color: #9b59b6; background: #f8f2fd; }
+        
+        .arrow {
+            position: absolute;
+            z-index: 5;
+        }
+        
+        .arrow-line {
+            stroke: #2c3e50;
+            stroke-width: 2;
+            stroke-linecap: round;
+            marker-end: url(#arrowhead);
+            filter: none;
+            opacity: 0.9;
+            pointer-events: none;
+        }
+        .arrow-line.future { stroke: #7f8c8d; opacity: 0.85; stroke-dasharray: 6 6; marker-end: url(#arrowhead-grey); }
+        .arrow-line.power { stroke: #e74c3c; opacity: 0.95; marker-end: url(#arrowhead-red); }
+        .connector-dot { fill: #2c3e50; stroke: #ffffff; stroke-width: 1; opacity: 0.95; }
+        .connector-dot.future { fill: #7f8c8d; }
+        .connector-dot.power { fill: #e74c3c; }
+        
+        .topic-label {
+            position: absolute;
+            background: #34495e;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            z-index: 20;
+            pointer-events: none;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        }
+        .topic-label.above-arrow { transform: translateY(-20px); }
+        
+        /* Removed arrow animation for a static diagram */
+        
+        .status-dot {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .status-complete { background: #27ae60; }
+        .status-partial { background: #f39c12; }
+        .status-pending { background: #e74c3c; }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .info-panel.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🤖 Human Following Robot Simulation Architecture</div>
+        
+        <div class="progress-info">
+            🧭 Simulation Plan: Gazebo + Core ROS Nodes (Tracker, Controller, Emergency) with Rosbag/RViz
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showDiagram('software')">Software Architecture (ROS)</button>
+            <button class="tab" onclick="showDiagram('hardware')">Hardware Implementation Plan</button>
+        </div>
+        
+        <!-- Software Architecture Diagram -->
+        <div id="software-panel" class="diagram-panel active">
+            <div class="diagram-container">
+                <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="8" markerHeight="6" 
+                                refX="8" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#2c3e50" />
+                        </marker>
+                        <marker id="arrowhead-grey" markerWidth="8" markerHeight="6" 
+                                refX="8" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#7f8c8d" />
+                        </marker>
+                        <marker id="arrowhead-red" markerWidth="8" markerHeight="6" 
+                                refX="8" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#e74c3c" />
+                        </marker>
+                    </defs>
+                    
+                    <!-- Data Flow Arrows - Software (Human-Following Simulation) -->
+                    <!-- Human Simulator -> Gazebo (service) -->
+                    <line class="arrow-line" x1="360" y1="110" x2="600" y2="100" />
+                    <circle class="connector-dot" cx="360" cy="110" r="3" />
+                    <circle class="connector-dot" cx="600" cy="100" r="3" />
+                    
+                    <!-- Gazebo -> Human Tracker (/gazebo/model_states) -->
+                    <line class="arrow-line" x1="690" y1="150" x2="420" y2="290" />
+                    <circle class="connector-dot" cx="690" cy="150" r="3" />
+                    <circle class="connector-dot" cx="420" cy="290" r="3" />
+                    
+                    <!-- Robot (Laser /scan) -> Robot Controller -->
+                    <line class="arrow-line" x1="800" y1="310" x2="950" y2="300" />
+                    <circle class="connector-dot" cx="800" cy="310" r="3" />
+                    <circle class="connector-dot" cx="950" cy="300" r="3" />
+                    
+                    <!-- Human Tracker (/human_position) -> Robot Controller -->
+                    <line class="arrow-line" x1="480" y1="310" x2="950" y2="310" />
+                    <circle class="connector-dot" cx="480" cy="310" r="3" />
+                    <circle class="connector-dot" cx="950" cy="310" r="3" />
+                    
+                    <!-- Robot Controller (/cmd_vel) -> Robot (diff drive) -->
+                    <line class="arrow-line" x1="1050" y1="320" x2="840" y2="330" />
+                    <circle class="connector-dot" cx="1050" cy="320" r="3" />
+                    <circle class="connector-dot" cx="840" cy="330" r="3" />
+                    
+                    <!-- Human Tracker (/human_position) -> Emergency Detector -->
+                    <line class="arrow-line" x1="430" y1="330" x2="430" y2="500" />
+                    <circle class="connector-dot" cx="430" cy="330" r="3" />
+                    <circle class="connector-dot" cx="430" cy="500" r="3" />
+                    
+                    <!-- Emergency Detector (/emergency_alert) -> Rosbag -->
+                    <line class="arrow-line" x1="480" y1="530" x2="650" y2="640" />
+                    <circle class="connector-dot" cx="480" cy="530" r="3" />
+                    <circle class="connector-dot" cx="650" cy="640" r="3" />
+                    
+                    <!-- Robot Controller (/cmd_vel) -> Rosbag -->
+                    <line class="arrow-line" x1="1000" y1="330" x2="690" y2="640" />
+                    <circle class="connector-dot" cx="1000" cy="330" r="3" />
+                    <circle class="connector-dot" cx="690" cy="640" r="3" />
+                    
+                    <!-- Human Tracker (/human_position) -> Rosbag -->
+                    <line class="arrow-line" x1="520" y1="330" x2="650" y2="640" />
+                    <circle class="connector-dot" cx="520" cy="330" r="3" />
+                    <circle class="connector-dot" cx="650" cy="640" r="3" />
+                    
+                    <!-- Gazebo (/gazebo/model_states) -> Rosbag -->
+                    <line class="arrow-line" x1="700" y1="150" x2="700" y2="640" />
+                    <circle class="connector-dot" cx="700" cy="150" r="3" />
+                    <circle class="connector-dot" cx="700" cy="640" r="3" />
+                    
+                    <!-- Robot (/scan) -> RViz -->
+                    <line class="arrow-line" x1="820" y1="310" x2="980" y2="640" />
+                    <circle class="connector-dot" cx="820" cy="310" r="3" />
+                    <circle class="connector-dot" cx="980" cy="640" r="3" />
+                </svg>
+                
+                <!-- Topic Labels (placed beside arrows) -->
+                <div class="topic-label" style="top: 30px; left: 380px;">/gazebo/set_model_state (srv)</div>
+                <div class="topic-label" style="top: 170px; left: 520px;">/gazebo/model_states</div>
+                <div class="topic-label" style="top: 230px; left: 860px;">/scan</div>
+                <div class="topic-label" style="top: 270px; left: 520px;">/human_position</div>
+                <div class="topic-label" style="top: 335px; left: 860px;">/cmd_vel</div>
+                <div class="topic-label" style="top: 410px; left: 440px;">/human_position</div>
+                <div class="topic-label" style="top: 540px; left: 560px;">/emergency_alert</div>
+                <div class="topic-label" style="top: 550px; left: 720px;">rosbag topics</div>
+                
+                <!-- Blocks: Human-Following Simulation -->
+                <div class="block input-layer" style="top: 50px; left: 200px; width: 180px; height: 90px;" data-info="human-simulator">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🧍 Human Simulator</div>
+                    <div class="block-details">✅ IMPLEMENTED<br>Moves target in Gazebo<br>Circle/random/8 pattern<br>Triggers fall event</div>
+                </div>
+
+                <div class="block processing-layer" style="top: 40px; left: 600px; width: 180px; height: 100px;" data-info="gazebo">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🌐 Gazebo Simulator</div>
+                    <div class="block-details">✅ RUNNING<br>World + models<br>Publishes model_states<br>Executes robot plugins</div>
+                </div>
+
+                <div class="block processing-layer" style="top: 220px; left: 600px; width: 220px; height: 110px;" data-info="robot">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🤖 Robot (URDF + Plugins)</div>
+                    <div class="block-details">✅ IMPLEMENTED<br>Diff drive (cmd_vel)<br>Laser scanner (/scan)<br>base_link, odom frames</div>
+                </div>
+
+                <div class="block processing-layer" style="top: 220px; left: 300px; width: 180px; height: 110px;" data-info="human-tracker">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🎯 Human Tracker</div>
+                    <div class="block-details">✅ IMPLEMENTED<br>Sub: /gazebo/model_states<br>Pub: /human_position<br>TF ready</div>
+                </div>
+
+                <div class="block action-layer" style="top: 220px; left: 950px; width: 200px; height: 110px;" data-info="robot-controller">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🕹️ Robot Controller</div>
+                    <div class="block-details">✅ IMPLEMENTED<br>Sub: /human_position, /scan<br>Pub: /cmd_vel<br>Follow + obstacle avoid</div>
+                </div>
+
+                <div class="block action-layer" style="top: 460px; left: 300px; width: 200px; height: 110px;" data-info="emergency-detector">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🚨 Emergency Detector</div>
+                    <div class="block-details">✅ IMPLEMENTED<br>Detect fall by height<br>Pub: /emergency_alert<br>Logs to file</div>
+                </div>
+
+                <div class="block output-layer" style="top: 600px; left: 620px; width: 200px; height: 100px;" data-info="rosbag">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">💾 Rosbag Recorder</div>
+                    <div class="block-details">✅ IMPLEMENTED<br>Records: /cmd_vel<br>/human_position, /emergency_alert<br>/gazebo/model_states</div>
+                </div>
+
+                <div class="block output-layer" style="top: 600px; left: 950px; width: 160px; height: 100px;" data-info="rviz">
+                    <div class="status-dot status-complete"></div>
+                    <div class="block-title">🧭 RViz</div>
+                    <div class="block-details">✅ OPTIONAL<br>Visualize /scan, TF<br>Odom, base_link, laser<br>Demo visualization</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hardware Implementation Diagram -->
+        <div id="hardware-panel" class="diagram-panel">
+            <div class="diagram-container">
+                <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
+                    <!-- Hardware Connection Arrows -->
+                    <!-- Watch to Raspberry Pi (edge to edge) -->
+                    <line class="arrow-line future" x1="240" y1="140" x2="400" y2="200" stroke-dasharray="10,5" />
+                    
+                    <!-- Camera to Raspberry Pi (edge to edge) -->
+                    <line class="arrow-line future" x1="640" y1="140" x2="580" y2="200" stroke-dasharray="10,5" />
+                    
+                    <!-- Raspberry Pi to Arduino (edge to edge) -->
+                    <line class="arrow-line future" x1="580" y1="320" x2="650" y2="400" stroke-dasharray="10,5" />
+                    
+                    <!-- Arduino to Motors (edge to edge) -->
+                    <line class="arrow-line future" x1="810" y1="520" x2="950" y2="600" stroke-dasharray="10,5" />
+                    
+                    <!-- Power Distribution (edge to edge) -->
+                    <line class="arrow-line power" x1="1100" y1="110" x2="580" y2="200" stroke-dasharray="10,5" />
+                    <line class="arrow-line power" x1="1100" y1="170" x2="650" y2="400" stroke-dasharray="10,5" />
+                </svg>
+                
+                <!-- Connection Labels -->
+                <div class="topic-label" style="top: 160px; left: 340px; background: #95a5a6;">BLE (Future)</div>
+                <div class="topic-label" style="top: 160px; left: 610px; background: #95a5a6;">USB (Future)</div>
+                <div class="topic-label" style="top: 350px; left: 615px; background: #95a5a6;">Serial (Future)</div>
+                <div class="topic-label" style="top: 545px; left: 900px; background: #95a5a6;">PWM (Future)</div>
+                <div class="topic-label" style="top: 140px; left: 820px; background: red; color: white;">12V Power</div>
+                
+                <!-- Hardware Blocks - All Future Implementation -->
+                
+                <!-- Smart Watch Hardware -->
+                <div class="block sensor-hw" style="top: 50px; left: 100px; width: 140px; height: 90px;" data-info="smartwatch-hw">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">⌚ Smart Watch</div>
+                    <div class="block-details">⏳ FUTURE<br>ESP32 + IMU<br>Heart rate sensor<br>BLE communication</div>
+                </div>
+                
+                <!-- Camera Hardware -->
+                <div class="block sensor-hw" style="top: 50px; left: 500px; width: 140px; height: 90px;" data-info="camera-hw">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">📷 USB Camera</div>
+                    <div class="block-details">⏳ FUTURE<br>720p webcam<br>Person detection<br>USB interface</div>
+                </div>
+                
+                <!-- Main Processing Unit -->
+                <div class="block processing-hw" style="top: 200px; left: 400px; width: 180px; height: 120px;" data-info="raspberry-pi">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">🖥️ Raspberry Pi 4</div>
+                    <div class="block-details">⏳ FUTURE<br>Main controller<br>ROS Noetic<br>Python nodes<br>WiFi connectivity</div>
+                </div>
+                
+                <!-- Robot Controller -->
+                <div class="block processing-hw" style="top: 400px; left: 650px; width: 160px; height: 120px;" data-info="arduino">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">🔧 Arduino</div>
+                    <div class="block-details">⏳ FUTURE<br>Motor control<br>Sensor interface<br>Real-time operations</div>
+                </div>
+                
+                <!-- Robot Sensors -->
+                <div class="block sensor-hw" style="top: 200px; left: 950px; width: 160px; height: 120px;" data-info="robot-sensors">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">📡 Robot Sensors</div>
+                    <div class="block-details">⏳ FUTURE<br>LiDAR scanner<br>Ultrasonic sensors<br>Wheel encoders</div>
+                </div>
+                
+                <!-- Motors & Drive System -->
+                <div class="block actuator-hw" style="top: 600px; left: 950px; width: 160px; height: 120px;" data-info="motors">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">⚙️ Drive System</div>
+                    <div class="block-details">⏳ FUTURE<br>DC gear motors<br>Differential drive<br>Wheel encoders</div>
+                </div>
+                
+                <!-- Power System -->
+                <div class="block actuator-hw" style="top: 50px; left: 1100px; width: 160px; height: 120px;" data-info="power">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">🔋 Power System</div>
+                    <div class="block-details">⏳ FUTURE<br>LiPo battery<br>Power distribution<br>Voltage regulation</div>
+                </div>
+                
+                <!-- External Services -->
+                <div class="block external-hw" style="top: 450px; left: 200px; width: 180px; height: 120px;" data-info="cloud-services">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">☁️ Cloud Services</div>
+                    <div class="block-details">⏳ FUTURE<br>Twilio SMS API<br>Emergency dispatch<br>Health monitoring</div>
+                </div>
+                
+                <!-- Mobile App -->
+                <div class="block external-hw" style="top: 600px; left: 400px; width: 160px; height: 120px;" data-info="mobile-app">
+                    <div class="status-dot status-pending"></div>
+                    <div class="block-title">📱 Family App</div>
+                    <div class="block-details">⏳ FUTURE<br>Emergency alerts<br>Health dashboard<br>Location tracking</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot status-complete"></div>
+                <span>✅ Implemented & Working (50%)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot status-partial"></div>
+                <span>🔄 Partial Implementation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot status-pending"></div>
+                <span>⏳ Future Implementation</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Info Panel -->
+    <div class="info-panel" id="infoPanel">
+        <button class="close-btn" onclick="closeInfo()">×</button>
+        <div id="infoContent"></div>
+    </div>
+    
+    <script>
+        const softwareInfo = {
+            "human-simulator": {
+                title: "🧍 Human Simulator",
+                status: "✅ Fully Implemented",
+                details: `
+                    <strong>Node:</strong> human_simulator.py<br>
+                    <strong>Interface:</strong> /gazebo/set_model_state (service)<br>
+                    <strong>Patterns:</strong> circle, random_walk, figure_eight<br>
+                    <strong>Demo:</strong> triggers fall by lowering z
+                `
+            },
+            gazebo: {
+                title: "🌐 Gazebo Simulator",
+                status: "✅ Running",
+                details: `
+                    <strong>World:</strong> human_following_world.world<br>
+                    <strong>Publishes:</strong> /gazebo/model_states<br>
+                    <strong>Robot:</strong> follower_robot.urdf with diff_drive + laser
+                `
+            },
+            robot: {
+                title: "🤖 Robot (URDF + Plugins)",
+                status: "✅ Fully Implemented",
+                details: `
+                    <strong>Inputs:</strong> /cmd_vel<br>
+                    <strong>Outputs:</strong> /scan, /odom TF<br>
+                    <strong>Drive:</strong> libgazebo_ros_diff_drive.so
+                `
+            },
+            "human-tracker": {
+                title: "🎯 Human Tracker",
+                status: "✅ Fully Implemented",
+                details: `
+                    <strong>Node:</strong> human_tracker.py<br>
+                    <strong>Subscribes:</strong> /gazebo/model_states<br>
+                    <strong>Publishes:</strong> /human_position
+                `
+            },
+            "robot-controller": {
+                title: "🕹️ Robot Controller",
+                status: "✅ Fully Implemented",
+                details: `
+                    <strong>Node:</strong> robot_controller.py<br>
+                    <strong>Subscribes:</strong> /human_position, /scan<br>
+                    <strong>Publishes:</strong> /cmd_vel
+                `
+            },
+            "emergency-detector": {
+                title: "🚨 Emergency Detector",
+                status: "✅ Fully Implemented",
+                details: `
+                    <strong>Node:</strong> emergency_detector.py<br>
+                    <strong>Subscribes:</strong> /human_position<br>
+                    <strong>Publishes:</strong> /emergency_alert<br>
+                    <strong>Logs:</strong> /tmp/granny_emergencies.log
+                `
+            },
+            rosbag: {
+                title: "💾 Rosbag Recorder",
+                status: "✅ Fully Implemented",
+                details: `
+                    <strong>Topics:</strong> /cmd_vel, /human_position,<br>
+                    /emergency_alert, /gazebo/model_states
+                `
+            },
+            rviz: {
+                title: "🧭 RViz",
+                status: "✅ Optional",
+                details: `
+                    <strong>Visualize:</strong> /scan, TF, odom<br>
+                    <strong>Config:</strong> config/demo.rviz
+                `
+            }
+        };
+        
+        const hardwareInfo = {
+            "smartwatch-hw": {
+                title: "⌚ Smart Watch Hardware",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Components:</strong><br>
+                    • ESP32-C3 microcontroller<br>
+                    • MPU6050 6-axis IMU<br>
+                    • MAX30102 heart rate sensor<br>
+                    • 240mAh LiPo battery<br><br>
+                    
+                    <strong>Communication:</strong><br>
+                    • Bluetooth Low Energy 5.0<br>
+                    • 50m range to robot<br>
+                    • Low power consumption<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Design phase - not yet started<br>
+                    • Component research completed<br>
+                    • Will replace watch simulator
+                `
+            },
+            "camera-hw": {
+                title: "📷 Camera Hardware",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Hardware:</strong><br>
+                    • USB webcam (Logitech C270)<br>
+                    • 720p resolution @ 30fps<br>
+                    • Auto-focus capability<br>
+                    • Wide-angle lens (60° FOV)<br><br>
+                    
+                    <strong>Integration:</strong><br>
+                    • USB 2.0 to processing unit<br>
+                    • OpenCV V4L2 drivers<br>
+                    • Plug-and-play with ROS<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Hardware not yet acquired<br>
+                    • Integration planning phase<br>
+                    • Will enable real person tracking
+                `
+            },
+            "raspberry-pi": {
+                title: "🖥️ Main Processing Unit",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Hardware:</strong><br>
+                    • Raspberry Pi 4 Model B (8GB)<br>
+                    • 64GB microSD card (Class 10)<br>
+                    • Active cooling system<br>
+                    • GPIO expansion board<br><br>
+                    
+                    <strong>Software Stack:</strong><br>
+                    • Ubuntu 20.04 LTS<br>
+                    • ROS Noetic Ninjemys<br>
+                    • OpenCV 4.2+<br>
+                    • Python 3.8 runtime<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Currently running ROS on laptop<br>
+                    • Hardware not yet acquired<br>
+                    • Software stack validated
+                `
+            },
+            "arduino": {
+                title: "🔧 Robot Controller",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Hardware:</strong><br>
+                    • Arduino Mega 2560<br>
+                    • Motor driver shields<br>
+                    • Sensor interface boards<br>
+                    • Real-time clock module<br><br>
+                    
+                    <strong>Responsibilities:</strong><br>
+                    • Motor speed control (PWM)<br>
+                    • Sensor data acquisition<br>
+                    • Emergency stop handling<br>
+                    • Real-time operations<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Design and planning phase<br>
+                    • Hardware not yet acquired<br>
+                    • Will interface with ROS via serial
+                `
+            },
+            "robot-sensors": {
+                title: "📡 Robot Sensor Suite",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Sensors:</strong><br>
+                    • RPLiDAR A1M8 (360° scanning)<br>
+                    • Ultrasonic sensors (HC-SR04)<br>
+                    • Wheel encoders<br>
+                    • IMU for robot pose<br><br>
+                    
+                    <strong>Capabilities:</strong><br>
+                    • Obstacle detection and avoidance<br>
+                    • SLAM mapping<br>
+                    • Accurate odometry<br>
+                    • Environmental awareness<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Component selection completed<br>
+                    • Hardware not yet acquired<br>
+                    • ROS driver compatibility verified
+                `
+            },
+            "motors": {
+                title: "⚙️ Drive System",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Components:</strong><br>
+                    • 2x 12V DC gear motors<br>
+                    • Differential drive configuration<br>
+                    • Motor driver modules (L298N)<br>
+                    • Pneumatic wheels<br><br>
+                    
+                    <strong>Specifications:</strong><br>
+                    • 200 RPM, 10 kg-cm torque<br>
+                    • Built-in encoders<br>
+                    • Maximum speed: 1.2 m/s<br>
+                    • Precise speed control<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Motor selection completed<br>
+                    • Hardware not yet acquired<br>
+                    • Control algorithms ready
+                `
+            },
+            "power": {
+                title: "🔋 Power System",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Components:</strong><br>
+                    • 12V 5000mAh LiPo battery<br>
+                    • Buck converters (12V→5V, 12V→3.3V)<br>
+                    • Power distribution board<br>
+                    • Battery management system<br><br>
+                    
+                    <strong>Specifications:</strong><br>
+                    • 2-3 hour continuous operation<br>
+                    • Voltage monitoring<br>
+                    • Overcurrent protection<br>
+                    • Smart charging capability<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • Power budget calculations done<br>
+                    • Components not yet acquired<br>
+                    • Safety features planned
+                `
+            },
+            "cloud-services": {
+                title: "☁️ Cloud Services Integration",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Services:</strong><br>
+                    • Twilio SMS/Voice API<br>
+                    • Firebase real-time database<br>
+                    • Google Maps geocoding<br>
+                    • Health data analytics platform<br><br>
+                    
+                    <strong>Architecture:</strong><br>
+                    • RESTful API endpoints<br>
+                    • WebSocket real-time updates<br>
+                    • Encrypted data transmission<br>
+                    • Cloud-based alert routing<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • API documentation reviewed<br>
+                    • Integration not yet started<br>
+                    • Will connect to alert system
+                `
+            },
+            "mobile-app": {
+                title: "📱 Family Mobile App",
+                status: "⏳ Future Implementation",
+                details: `
+                    <strong>Planned Features:</strong><br>
+                    • React Native cross-platform app<br>
+                    • Real-time health monitoring<br>
+                    • Emergency notification system<br>
+                    • GPS location tracking<br><br>
+                    
+                    <strong>Capabilities:</strong><br>
+                    • Push notifications for emergencies<br>
+                    • Historical health data charts<br>
+                    • Robot status monitoring<br>
+                    • Two-way communication<br><br>
+                    
+                    <strong>Current Status:</strong><br>
+                    • UI mockups in progress<br>
+                    • Development not yet started<br>
+                    • Backend integration planned
+                `
+            }
+        };
+        
+        let currentDiagram = 'software';
+        
+        function showDiagram(type) {
+            // Update tab styling
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide diagram panels
+            document.querySelectorAll('.diagram-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(type + '-panel').classList.add('active');
+            
+            currentDiagram = type;
+        }
+        
+        // Add click handlers to blocks
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.block').forEach(block => {
+                block.addEventListener('click', function() {
+                    const infoKey = this.dataset.info;
+                    const infoSource = currentDiagram === 'software' ? softwareInfo : hardwareInfo;
+                    if (infoSource[infoKey]) {
+                        showInfo(infoSource[infoKey]);
+                    }
+                });
+            });
+        });
+        
+        function showInfo(info) {
+            const panel = document.getElementById('infoPanel');
+            const content = document.getElementById('infoContent');
+            
+            content.innerHTML = `
+                <h3>${info.title}</h3>
+                <p><strong>Status:</strong> ${info.status}</p>
+                <div>${info.details}</div>
+            `;
+            
+            panel.classList.add('show');
+        }
+        
+        function closeInfo() {
+            document.getElementById('infoPanel').classList.remove('show');
+        }
+        
+        // Close panel when clicking outside
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('infoPanel');
+            if (panel.classList.contains('show') && !panel.contains(e.target) && !e.target.closest('.block')) {
+                closeInfo();
+            }
+        });
+        
+        // Arrow animation removed: static diagram
+    </script>
+</body>
+</html>
